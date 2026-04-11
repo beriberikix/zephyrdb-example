@@ -4,18 +4,21 @@ A standalone Zephyr application demonstrating
 [ZephyrDB](https://github.com/beriberikix/zephyrdb) — an embedded multi-model
 database for Zephyr RTOS.
 
-This "kitchen sink" example exercises every major ZephyrDB feature in a single
-app targeting `native_sim`:
+This example exercises the ZephyrDB features that work out-of-the-box on
+`native_sim`:
 
 - **KV** — set, get, delete, and iterate keys (ZMS backend)
-- **Time-series** — append, batch append, flush, FlatBuffer export, and all five
-  aggregate queries (MIN/MAX/AVG/SUM/COUNT)
-- **Document** — create, set typed fields (string, i64, f64, bool, bytes), save,
-  read back, FlatBuffer export, query with filters, delete
-- **Eventing** — callback listeners and zbus channel reads for KV, TS, and DOC
-  events
+- **Eventing** — callback listeners and zbus channel reads for KV events
 - **Shell** — interactive `zdb health` and `zdb stats` commands
 - **Health & Stats** — query, export, validate, and reset statistics
+
+> **Note:** Time-series, Document, and FlatBuffer features require a mounted
+> LittleFS filesystem and are not included in this initial example. A future
+> release will add a `boards/native_sim.overlay` with a flash partition and
+> LittleFS fstab entry to enable these features
+> ([#2](https://github.com/beriberikix/zephyrdb-example/issues/2)). See the
+> in-tree [zephyrdb samples](https://github.com/beriberikix/zephyrdb/tree/main/samples)
+> for demonstrations of those features on hardware targets.
 
 ## Prerequisites
 
@@ -60,9 +63,9 @@ zdb stats
 ```
 .
 ├── CMakeLists.txt   # Zephyr app build configuration
-├── prj.conf         # Kconfig: enables all ZephyrDB features for native_sim
+├── prj.conf         # Kconfig: enables KV, eventing, shell, stats
 ├── src/
-│   └── main.c       # Kitchen-sink demo application
+│   └── main.c       # Demo application
 ├── west.yml         # West manifest with minimal dependencies
 └── README.md
 ```
@@ -73,10 +76,8 @@ The manifest pulls only what `native_sim` needs:
 
 | Project | Purpose |
 |---------|---------|
-| `zephyr` | Zephyr RTOS (imports only `littlefs` from submanifest) |
+| `zephyr` | Zephyr RTOS |
 | `zephyrdb` | ZephyrDB module |
-| `flatcc-zephyr` | FlatBuffers Zephyr overlay |
-| `flatcc` | Upstream FlatBuffers runtime (required by flatcc-zephyr) |
 
 ## License
 
