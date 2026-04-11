@@ -11,3 +11,6 @@ __pycache__/
 
 # Optional local west metadata if workspace root is this repo
 .west/
+
+# Runtime artifacts
+flash.bin

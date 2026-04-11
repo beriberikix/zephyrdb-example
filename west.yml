@@ -24,7 +24,7 @@ manifest:
     # Run: git -C modules/lib/flatcc-zephyr submodule update --init
     - name: flatcc-zephyr
       remote: beriberikix
-      revision: feat/flatcc-submodule
+      revision: main
       path: modules/lib/flatcc-zephyr
 
   self:

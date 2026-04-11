@@ -161,20 +161,22 @@ static int init_zms(struct zms_fs *fs)
 	return 0;
 }
 
-static void drain_kv_events(void)
+/* zbus channels hold only the latest published value (not a queue),
+ * so we do a single read to print the most recent event. */
+static void print_latest_kv_event(void)
 {
 	zdb_kv_event_t event;
-	while (zbus_chan_read(&zdb_kv_event_chan, &event, K_NO_WAIT) == 0) {
+	if (zbus_chan_read(&zdb_kv_event_chan, &event, K_NO_WAIT) == 0) {
 		printk("zbus[kv]: type=%s ns=%s key=%s len=%u status=%d ts=%" PRIu64 "\n",
 		       kv_event_type_str(event.type), event.namespace_name, event.key,
 		       (unsigned int)event.value_len, (int)event.status, event.timestamp_ms);
 	}
 }
 
-static void drain_ts_events(void)
+static void print_latest_ts_event(void)
 {
 	zdb_ts_event_t event;
-	while (zbus_chan_read(&zdb_ts_event_chan, &event, K_NO_WAIT) == 0) {
+	if (zbus_chan_read(&zdb_ts_event_chan, &event, K_NO_WAIT) == 0) {
 		printk("zbus[ts]: type=%s stream=%s sample_ts=%" PRIu64 " val=%" PRId64
 		       " flushed=%u truncated=%u status=%d ts=%" PRIu64 "\n",
 		       ts_event_type_str(event.type), event.stream_name, event.sample_ts_ms,
@@ -183,10 +185,10 @@ static void drain_ts_events(void)
 	}
 }
 
-static void drain_doc_events(void)
+static void print_latest_doc_event(void)
 {
 	zdb_doc_event_t event;
-	while (zbus_chan_read(&zdb_doc_event_chan, &event, K_NO_WAIT) == 0) {
+	if (zbus_chan_read(&zdb_doc_event_chan, &event, K_NO_WAIT) == 0) {
 		printk("zbus[doc]: type=%s collection=%s id=%s fields=%u bytes=%u status=%d ts=%" PRIu64
 		       "\n",
 		       doc_event_type_str(event.type), event.collection_name, event.document_id,
@@ -289,7 +291,7 @@ static zdb_status_t run_kv_demo(void)
 
 out_close:
 	(void)zdb_kv_close(&kv);
-	drain_kv_events();
+	print_latest_kv_event();
 	return rc;
 }
 
@@ -360,7 +362,7 @@ static zdb_status_t run_ts_demo(void)
 
 out_close:
 	(void)zdb_ts_close(&ts);
-	drain_ts_events();
+	print_latest_ts_event();
 	return rc;
 }
 
@@ -451,7 +453,7 @@ static zdb_status_t run_doc_demo(void)
 
 out_close:
 	(void)zdb_doc_close(&doc);
-	drain_doc_events();
+	print_latest_doc_event();
 	return rc;
 }
 
