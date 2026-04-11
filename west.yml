@@ -12,12 +12,18 @@ manifest:
       remote: zephyrproject
       revision: main
       import:
-        name-allowlist: []
+        name-allowlist:
+          - littlefs
 
     - name: zephyrdb
       remote: beriberikix
       revision: main
       path: modules/lib/zephyrdb
+
+    - name: flatcc-zephyr
+      remote: beriberikix
+      revision: main
+      path: modules/lib/flatcc-zephyr
 
   self:
     path: zephyrdb-example
