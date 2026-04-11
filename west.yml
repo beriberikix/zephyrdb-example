@@ -19,7 +19,7 @@ manifest:
 
     - name: zephyrdb
       remote: beriberikix
-      revision: feat/zephyr-module-layout
+      revision: main
       path: modules/lib/zephyrdb
 
     - name: flatcc-zephyr
