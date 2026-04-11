@@ -6,8 +6,6 @@ manifest:
       url-base: https://github.com/zephyrproject-rtos
     - name: beriberikix
       url-base: https://github.com/beriberikix
-    - name: dvidelabs
-      url-base: https://github.com/dvidelabs
 
   projects:
     - name: zephyr
@@ -22,15 +20,12 @@ manifest:
       revision: main
       path: modules/lib/zephyrdb
 
+    # FlatBuffers support: flatcc-zephyr wraps upstream flatcc for Zephyr.
+    # Run: git -C modules/lib/flatcc-zephyr submodule update --init
     - name: flatcc-zephyr
       remote: beriberikix
-      revision: main
+      revision: feat/flatcc-submodule
       path: modules/lib/flatcc-zephyr
-
-    - name: flatcc
-      remote: dvidelabs
-      revision: master
-      path: modules/lib/flatcc-zephyr/modules/lib/flatcc
 
   self:
     path: zephyrdb-example

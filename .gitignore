@@ -1,4 +1,13 @@
+# Zephyr build output
 build/
+build_*/
+twister-out/
+twister-out.*/
+
+# Local Python environment
 .venv/
 __pycache__/
 *.pyc
+
+# Optional local west metadata if workspace root is this repo
+.west/
