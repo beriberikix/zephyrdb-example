@@ -1,0 +1,36 @@
+manifest:
+  version: "0.13"
+
+  remotes:
+    - name: zephyrproject
+      url-base: https://github.com/zephyrproject-rtos
+    - name: beriberikix
+      url-base: https://github.com/beriberikix
+    - name: dvidelabs
+      url-base: https://github.com/dvidelabs
+
+  projects:
+    - name: zephyr
+      remote: zephyrproject
+      revision: main
+      import:
+        name-allowlist:
+          - littlefs
+
+    - name: zephyrdb
+      remote: beriberikix
+      revision: feat/zephyr-module-layout
+      path: modules/lib/zephyrdb
+
+    - name: flatcc-zephyr
+      remote: beriberikix
+      revision: main
+      path: modules/lib/flatcc-zephyr
+
+    - name: flatcc
+      remote: dvidelabs
+      revision: master
+      path: modules/lib/flatcc-zephyr/modules/lib/flatcc
+
+  self:
+    path: zephyrdb-example
