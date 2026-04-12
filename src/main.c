@@ -288,7 +288,21 @@ static zdb_status_t run_ts_demo(void)
 
 	rc = zdb_ts_query_aggregate(&stream, window, ZDB_TS_AGG_AVG, &agg);
 	if (rc == ZDB_OK) {
-		printk("ts: avg=%f points=%u\n", agg.value, agg.points);
+		int64_t avg_milli = (int64_t)(agg.value * 1000.0);
+		const char *avg_sign = "";
+		uint64_t avg_whole;
+		uint64_t avg_frac;
+
+		if (avg_milli < 0) {
+			avg_sign = "-";
+			avg_milli = -avg_milli;
+		}
+
+		avg_whole = (uint64_t)avg_milli / 1000U;
+		avg_frac = (uint64_t)avg_milli % 1000U;
+
+		printk("ts: avg=%s%" PRIu64 ".%03" PRIu64 " points=%u\n",
+		       avg_sign, avg_whole, avg_frac, (unsigned int)agg.points);
 	} else {
 		printk("ts: aggregate query rc=%d\n", (int)rc);
 	}
