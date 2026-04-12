@@ -39,7 +39,7 @@ static const zdb_event_listener_t g_kv_listeners[] = {
 
 static zdb_cfg_t g_cfg = {
 	.kv_backend_fs = NULL,
-	.lfs_mount_point = NULL,
+	.lfs_mount_point = CONFIG_ZDB_LFS_MOUNT_POINT,
 	.work_q = &k_sys_work_q,
 	.event_listeners = g_kv_listeners,
 	.event_listener_count = ARRAY_SIZE(g_kv_listeners),
@@ -53,6 +53,34 @@ static const char *kv_event_type_str(zdb_event_type_t type)
 	case ZDB_EVENT_KV_SET:
 		return "SET";
 	case ZDB_EVENT_KV_DELETE:
+		return "DELETE";
+	default:
+		return "UNKNOWN";
+	}
+}
+
+static const char *ts_event_type_str(zdb_ts_event_type_t type)
+{
+	switch (type) {
+	case ZDB_TS_EVENT_APPEND:
+		return "APPEND";
+	case ZDB_TS_EVENT_FLUSH:
+		return "FLUSH";
+	case ZDB_TS_EVENT_RECOVER:
+		return "RECOVER";
+	default:
+		return "UNKNOWN";
+	}
+}
+
+static const char *doc_event_type_str(zdb_doc_event_type_t type)
+{
+	switch (type) {
+	case ZDB_DOC_EVENT_CREATE:
+		return "CREATE";
+	case ZDB_DOC_EVENT_SAVE:
+		return "SAVE";
+	case ZDB_DOC_EVENT_DELETE:
 		return "DELETE";
 	default:
 		return "UNKNOWN";
@@ -98,6 +126,31 @@ static void print_latest_kv_event(void)
 		printk("zbus[kv]: type=%s ns=%s key=%s len=%u status=%d ts=%" PRIu64 "\n",
 		       kv_event_type_str(event.type), event.namespace_name, event.key,
 		       (unsigned int)event.value_len, (int)event.status, event.timestamp_ms);
+	}
+}
+
+static void print_latest_ts_event(const char *label)
+{
+	zdb_ts_event_t event;
+
+	if (zbus_chan_read(&zdb_ts_event_chan, &event, K_NO_WAIT) == 0) {
+		printk("zbus[ts]: %s type=%s stream=%s status=%d ts=%" PRIu64 "\n",
+		       label, ts_event_type_str(event.type),
+		       (event.stream_name != NULL) ? event.stream_name : "(null)",
+		       (int)event.status, event.timestamp_ms);
+	}
+}
+
+static void print_latest_doc_event(const char *label)
+{
+	zdb_doc_event_t event;
+
+	if (zbus_chan_read(&zdb_doc_event_chan, &event, K_NO_WAIT) == 0) {
+		printk("zbus[doc]: %s type=%s collection=%s doc=%s status=%d ts=%" PRIu64 "\n",
+		       label, doc_event_type_str(event.type),
+		       (event.collection_name != NULL) ? event.collection_name : "(null)",
+		       (event.document_id != NULL) ? event.document_id : "(null)",
+		       (int)event.status, event.timestamp_ms);
 	}
 }
 
@@ -199,6 +252,100 @@ out_close:
 	return rc;
 }
 
+static zdb_status_t run_ts_demo(void)
+{
+	zdb_status_t rc;
+	zdb_ts_t stream;
+	zdb_ts_sample_i64_t sample = {
+		.ts_ms = (uint64_t)k_uptime_get(),
+		.value = 100,
+	};
+	zdb_ts_agg_result_t agg;
+	zdb_ts_window_t window = ZDB_TS_WINDOW_ALL;
+
+	rc = zdb_ts_open(&g_db, "metrics", &stream);
+	if (rc != ZDB_OK) {
+		printk("ts: open failed rc=%d (check LittleFS mount at %s)\n",
+		       (int)rc, CONFIG_ZDB_LFS_MOUNT_POINT);
+		return rc;
+	}
+
+	rc = zdb_ts_append_i64(&stream, &sample);
+	if (rc != ZDB_OK) {
+		printk("ts: append failed rc=%d\n", (int)rc);
+		(void)zdb_ts_close(&stream);
+		return rc;
+	}
+	print_latest_ts_event("after append");
+
+	rc = zdb_ts_flush_sync(&stream, K_SECONDS(2));
+	if (rc != ZDB_OK) {
+		printk("ts: flush failed rc=%d\n", (int)rc);
+		(void)zdb_ts_close(&stream);
+		return rc;
+	}
+	print_latest_ts_event("after flush");
+
+	rc = zdb_ts_query_aggregate(&stream, window, ZDB_TS_AGG_AVG, &agg);
+	if (rc == ZDB_OK) {
+		int64_t avg_milli = (int64_t)(agg.value * 1000.0);
+		const char *avg_sign = "";
+		uint64_t avg_whole;
+		uint64_t avg_frac;
+
+		if (avg_milli < 0) {
+			avg_sign = "-";
+			avg_milli = -avg_milli;
+		}
+
+		avg_whole = (uint64_t)avg_milli / 1000U;
+		avg_frac = (uint64_t)avg_milli % 1000U;
+
+		printk("ts: avg=%s%" PRIu64 ".%03" PRIu64 " points=%u\n",
+		       avg_sign, avg_whole, avg_frac, (unsigned int)agg.points);
+	} else {
+		printk("ts: aggregate query rc=%d\n", (int)rc);
+	}
+
+	(void)zdb_ts_close(&stream);
+	return ZDB_OK;
+}
+
+static zdb_status_t run_doc_demo(void)
+{
+	zdb_status_t rc;
+	zdb_doc_t doc;
+
+	rc = zdb_doc_create(&g_db, "users", "u100", &doc);
+	if (rc != ZDB_OK) {
+		printk("doc: create failed rc=%d\n", (int)rc);
+		return rc;
+	}
+	print_latest_doc_event("after create");
+
+	(void)zdb_doc_field_set_string(&doc, "name", "Ada");
+	(void)zdb_doc_field_set_bool(&doc, "active", true);
+
+	rc = zdb_doc_save(&doc);
+	if (rc != ZDB_OK) {
+		printk("doc: save failed rc=%d\n", (int)rc);
+		(void)zdb_doc_close(&doc);
+		return rc;
+	}
+	print_latest_doc_event("after save");
+
+	printk("doc: created and saved user u100\n");
+	(void)zdb_doc_close(&doc);
+
+	rc = zdb_doc_delete(&g_db, "users", "u100");
+	if (rc == ZDB_OK) {
+		printk("doc: deleted user u100\n");
+		print_latest_doc_event("after delete");
+	}
+
+	return ZDB_OK;
+}
+
 int main(void)
 {
 	zdb_status_t rc;
@@ -224,6 +371,16 @@ int main(void)
 	rc = run_kv_demo();
 	if (rc != ZDB_OK) {
 		printk("kv demo failed rc=%d (%s)\n", (int)rc, zdb_status_str(rc));
+	}
+
+	rc = run_ts_demo();
+	if (rc != ZDB_OK) {
+		printk("ts demo failed rc=%d (%s)\n", (int)rc, zdb_status_str(rc));
+	}
+
+	rc = run_doc_demo();
+	if (rc != ZDB_OK) {
+		printk("doc demo failed rc=%d (%s)\n", (int)rc, zdb_status_str(rc));
 	}
 
 	print_health_and_stats("after");

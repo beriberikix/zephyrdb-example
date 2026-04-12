@@ -4,21 +4,19 @@ A standalone Zephyr application demonstrating
 [ZephyrDB](https://github.com/beriberikix/zephyrdb) — an embedded multi-model
 database for Zephyr RTOS.
 
-This example exercises the ZephyrDB features that work out-of-the-box on
-`native_sim`:
+This example exercises ZephyrDB features on `native_sim`:
 
 - **KV** — set, get, delete, and iterate keys (ZMS backend)
-- **Eventing** — callback listeners and zbus channel reads for KV events
+- **Time-series** — append, flush, and aggregate query (LittleFS backend)
+- **Document** — create, set fields, save, and delete (LittleFS backend)
+- **Eventing** — callback listeners and zbus channel reads for KV, TS, and DOC events
+- **FlatBuffers** — stats export via the FlatCC runtime
 - **Shell** — interactive `zdb health` and `zdb stats` commands
 - **Health & Stats** — query, export, validate, and reset statistics
 
-> **Note:** Time-series, Document, and FlatBuffer features require a mounted
-> LittleFS filesystem and are not included in this initial example. A future
-> release will add a `boards/native_sim.overlay` with a flash partition and
-> LittleFS fstab entry to enable these features
-> ([#2](https://github.com/beriberikix/zephyrdb-example/issues/2)). See the
-> in-tree [zephyrdb samples](https://github.com/beriberikix/zephyrdb/tree/main/samples)
-> for demonstrations of those features on hardware targets.
+A `boards/native_sim.overlay` adds a 256 KB LittleFS partition on the
+simulated flash and an fstab automount at `/lfs`, enabling the TS and DOC
+backends without any manual mount step.
 
 ## Prerequisites
 
@@ -62,22 +60,25 @@ zdb stats
 
 ```
 .
-├── CMakeLists.txt   # Zephyr app build configuration
-├── prj.conf         # Kconfig: enables KV, eventing, shell, stats
+├── boards/
+│   └── native_sim.overlay  # Flash partition + LittleFS fstab automount
+├── CMakeLists.txt           # Zephyr app build config + flatcc-zephyr module
+├── prj.conf                 # Kconfig: KV, TS, DOC, FlatBuffers, eventing, shell
 ├── src/
-│   └── main.c       # Demo application
-├── west.yml         # West manifest with minimal dependencies
+│   └── main.c               # Demo application
+├── west.yml                 # West manifest (zephyr, zephyrdb, flatcc-zephyr)
 └── README.md
 ```
 
 ## West Manifest
 
-The manifest pulls only what `native_sim` needs:
+The manifest pulls the modules needed for `native_sim`:
 
 | Project | Purpose |
-|---------|---------|
-| `zephyr` | Zephyr RTOS |
+|---------|----------|
+| `zephyr` | Zephyr RTOS (with `littlefs` allowlisted) |
 | `zephyrdb` | ZephyrDB module |
+| `flatcc-zephyr` | FlatCC runtime for FlatBuffer support |
 
 ## License
 
