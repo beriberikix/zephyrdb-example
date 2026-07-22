@@ -23,6 +23,11 @@ backends without any manual mount step.
 - [Zephyr SDK](https://docs.zephyrproject.org/latest/develop/getting_started/)
   installed and on your PATH
 - [uv](https://docs.astral.sh/uv/) for Python environment management
+- A Linux host (the `native_sim` board does not build on macOS or Windows)
+
+Dependencies are pinned in `west.yml` (Zephyr v4.4.1 plus fixed zephyrdb and
+flatcc-zephyr revisions) so builds are reproducible; update the pins
+deliberately when moving to newer releases.
 
 ## Setup
 
